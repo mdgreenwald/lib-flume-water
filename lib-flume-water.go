@@ -31,10 +31,10 @@ type AuthRequest struct {
 
 // TokenData represents the token data in the response
 type TokenData struct {
-	TokenType    string `json:"token_type"`
-	AccessToken  string `json:"access_token"`
-	ExpiresIn    int    `json:"expires_in"`
-	RefreshToken string `json:"refresh_token"`
+	TokenType    string      `json:"token_type"`
+	AccessToken  string      `json:"access_token"`
+	ExpiresIn    int         `json:"expires_in"`
+	RefreshToken string      `json:"refresh_token"`
 	UserID       interface{} `json:"user_id"` // Can be string or int
 }
 
@@ -218,15 +218,15 @@ func (c *Client) AuthenticateFromEnv(envPath string) (*AuthResult, error) {
 
 // Device represents a Flume device
 type Device struct {
-	ID               interface{} `json:"id"`
-	Type             int         `json:"type"` // 1 = Bridge, 2 = Sensor
-	ProductID        interface{} `json:"product_id"`
-	LocationID       interface{} `json:"location_id"`
-	UserID           interface{} `json:"user_id"`
-	ConnectedDevice  interface{} `json:"connected_device"`
-	BatteryLevel     interface{} `json:"battery_level"`
-	LastSeen         string      `json:"last_seen"`
-	ConnectedDatetime string     `json:"connected_datetime"`
+	ID                interface{} `json:"id"`
+	Type              int         `json:"type"` // 1 = Bridge, 2 = Sensor
+	ProductID         interface{} `json:"product_id"`
+	LocationID        interface{} `json:"location_id"`
+	UserID            interface{} `json:"user_id"`
+	ConnectedDevice   interface{} `json:"connected_device"`
+	BatteryLevel      interface{} `json:"battery_level"`
+	LastSeen          string      `json:"last_seen"`
+	ConnectedDatetime string      `json:"connected_datetime"`
 }
 
 // Location represents a Flume location

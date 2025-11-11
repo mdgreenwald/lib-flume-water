@@ -1,13 +1,17 @@
 module github.com/mdgreenwald/lib-flume-water
 
-go 1.25
+go 1.24.0
 
-require github.com/lestrrat-go/jwx/v3 v3.0.12
+toolchain go1.24.7
+
+require (
+	github.com/joho/godotenv v1.5.1
+	github.com/lestrrat-go/jwx/v3 v3.0.12
+)
 
 require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
-	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/lestrrat-go/blackmagic v1.0.4 // indirect
 	github.com/lestrrat-go/dsig v1.0.0 // indirect
 	github.com/lestrrat-go/dsig-secp256k1 v1.0.0 // indirect
