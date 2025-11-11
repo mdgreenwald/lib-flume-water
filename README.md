@@ -12,37 +12,7 @@ A Go library for interacting with the Flume Water API. This library provides a s
 
 Flume is a smart home water monitoring system that helps you track water usage, detect leaks, and understand your water consumption patterns. This library allows developers to programmatically access their Flume account data.
 
-## Features
-
-- **Authentication**: OAuth2 password grant authentication with JWT token parsing
-- **Devices**: Retrieve all devices or filter by location
-- **Locations**: Get all locations associated with your account
-- **Water Usage Queries**: Query devices for historical water usage data
-- **Environment Configuration**: Load credentials from `.env` files
-- **Type Safety**: Handles both numeric and string ID types from the API
-- **Versioning**: Semantic versioning with exported version constant
-- **Comprehensive Testing**: 85% test coverage with 33 unit tests
-
-## Installation
-
-```bash
-go get github.com/mdgreenwald/lib-flume-water
-```
-
-## Quick Start
-
-### 1. Set up credentials
-
-Create a `.env` file with your Flume API credentials:
-
-```env
-FLUME_CLIENT_ID=your_client_id
-FLUME_CLIENT_SECRET=your_client_secret
-FLUME_USER_EMAIL=your_email@example.com
-FLUME_USER_PASSWORD=your_password
-```
-
-### 2. Use the library
+### Use the library
 
 ```go
 package main
@@ -86,14 +56,6 @@ func main() {
 ```
 
 ## API Reference
-
-### Version
-
-The library version can be accessed via the exported constant:
-
-```go
-fmt.Println(flumewater.Version) // Output: 0.1.0
-```
 
 ### Client
 
@@ -175,6 +137,14 @@ locations, err := client.GetLocations(authResult.AccessToken, authResult.UserID)
 
 **Location Methods**:
 - `GetIDString()` - Returns location ID as a string
+
+### Version
+
+The library version can be accessed via the exported constant:
+
+```go
+fmt.Println(flumewater.Version) // Output: 0.1.0
+```
 
 ## Running Tests
 
@@ -338,13 +308,6 @@ The release workflow will automatically create a GitHub release with changelog a
 ## License
 
 See LICENSE file for details.
-
-## Security
-
-- **Never commit your `.env` file** - It's already in `.gitignore`
-- **Never log or print access tokens** - They provide full API access
-- **Rotate credentials regularly** - Use the Flume portal to manage API keys
-- **Use HTTPS only** - The library defaults to the secure Flume API endpoint
 
 ## Support
 
