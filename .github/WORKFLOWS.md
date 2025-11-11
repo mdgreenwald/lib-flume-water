@@ -11,7 +11,7 @@ This repository uses GitHub Actions for continuous integration and automated rel
 - Pull requests targeting `main`, `master`, or `develop` branches
 
 **What it does:**
-- Runs tests across multiple Go versions (1.23, 1.24, 1.25)
+- Runs tests across multiple Go versions (1.22, 1.23, 1.24)
 - Executes `go vet` for code analysis
 - Runs tests with race detection and generates coverage reports
 - Uploads coverage to Codecov (if `CODECOV_TOKEN` is configured)

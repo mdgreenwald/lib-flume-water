@@ -257,7 +257,7 @@ Common error scenarios:
 
 ## Requirements
 
-- Go 1.25 or higher
+- Go 1.24 or higher
 - Valid Flume Water API credentials
 
 ## Dependencies
