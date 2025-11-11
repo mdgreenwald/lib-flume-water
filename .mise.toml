@@ -2,6 +2,7 @@
 act = 'latest'
 go = '1.24'
 golangci-lint = 'latest'
+goreleaser = "latest"
 pre-commit = 'latest'
 
 [tasks.ci]
