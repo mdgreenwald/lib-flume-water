@@ -5,9 +5,11 @@ repos:
     -   id: check-yaml
     -   id: end-of-file-fixer
     -   id: trailing-whitespace
--   repo: https://github.com/dnephin/pre-commit-golang
-    rev: v0.5.1
+-   repo: https://github.com/tekwizely/pre-commit-golang
+    rev: v1.0.0-rc.4
     hooks:
-      - id: go-fmt
-      - id: go-vet
-      - id: go-lint
+    -   id: go-vet
+        exclude: '_test\.go$'
+    -   id: go-fmt
+    -   id: golangci-lint
+        exclude: '_test\.go$'

@@ -47,9 +47,10 @@ func main() {
 	fmt.Printf("✓ Found %d device(s):\n", len(devices))
 	for i, dev := range devices {
 		deviceType := "Unknown"
-		if dev.Type == 1 {
+		switch dev.Type {
+		case 1:
 			deviceType = "Bridge"
-		} else if dev.Type == 2 {
+		case 2:
 			deviceType = "Sensor"
 		}
 		fmt.Printf("  [%d] %s (ID: %s)\n", i+1, deviceType, dev.GetIDString())
@@ -70,9 +71,10 @@ func main() {
 		fmt.Printf("✓ Found %d device(s) at this location:\n", len(locationDevices))
 		for i, dev := range locationDevices {
 			deviceType := "Unknown"
-			if dev.Type == 1 {
+			switch dev.Type {
+			case 1:
 				deviceType = "Bridge"
-			} else if dev.Type == 2 {
+			case 2:
 				deviceType = "Sensor"
 			}
 			fmt.Printf("  [%d] %s (ID: %s)\n", i+1, deviceType, dev.GetIDString())
