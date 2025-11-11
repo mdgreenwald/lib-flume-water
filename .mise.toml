@@ -1,4 +1,5 @@
 [tools]
+act = 'latest'
 go = '1.24'
 golangci-lint = 'latest'
 pre-commit = 'latest'
