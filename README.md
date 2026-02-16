@@ -313,4 +313,4 @@ See LICENSE file for details.
 
 For issues with this library, please open a GitHub issue.
 
-For Flume API support, contact Flume Water support or consult their API documentation.
+For Flume API support, contact Flume Water support or consult their [API documentation](https://flumetech.readme.io/reference/accessing-the-api).

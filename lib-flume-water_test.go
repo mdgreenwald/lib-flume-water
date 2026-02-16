@@ -145,9 +145,7 @@ func TestAuthenticate_Success(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			t.Errorf("Failed to encode response: %v", err)
-		}
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -202,9 +200,7 @@ func TestAuthenticate_NumericUserID(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			t.Errorf("Failed to encode response: %v", err)
-		}
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -235,9 +231,7 @@ func TestAuthenticate_FailedAuth(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			t.Errorf("Failed to encode response: %v", err)
-		}
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -268,9 +262,7 @@ func TestAuthenticate_EmptyData(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			t.Errorf("Failed to encode response: %v", err)
-		}
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -294,9 +286,7 @@ func TestAuthenticate_InvalidJSON(t *testing.T) {
 	// Create test server that returns invalid JSON
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		if _, err := w.Write([]byte("invalid json")); err != nil {
-			t.Errorf("Failed to write response: %v", err)
-		}
+		_, _ = w.Write([]byte("invalid json"))
 	}))
 	defer server.Close()
 
@@ -330,9 +320,7 @@ func TestAuthenticate_InvalidJWT(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			t.Errorf("Failed to encode response: %v", err)
-		}
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -350,15 +338,9 @@ func TestAuthenticate_InvalidJWT(t *testing.T) {
 func TestAuthenticate_MissingUserID(t *testing.T) {
 	// Create JWT without user_id claim
 	token := jwt.New()
-	if err := token.Set("type", "user"); err != nil {
-		t.Fatalf("failed to set type claim: %v", err)
-	}
-	if err := token.Set(jwt.IssuedAtKey, time.Now().Unix()); err != nil {
-		t.Fatalf("failed to set issued at claim: %v", err)
-	}
-	if err := token.Set(jwt.ExpirationKey, time.Now().Add(24*time.Hour).Unix()); err != nil {
-		t.Fatalf("failed to set expiration claim: %v", err)
-	}
+	_ = token.Set("type", "user")
+	_ = token.Set(jwt.IssuedAtKey, time.Now().Unix())
+	_ = token.Set(jwt.ExpirationKey, time.Now().Add(24*time.Hour).Unix())
 
 	serialized, err := jwt.NewSerializer().Serialize(token)
 	if err != nil {
@@ -385,9 +367,7 @@ func TestAuthenticate_MissingUserID(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			t.Errorf("Failed to encode response: %v", err)
-		}
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -423,10 +403,10 @@ FLUME_USER_PASSWORD=test_password
 	}
 
 	// Clear any existing environment variables
-	os.Unsetenv("FLUME_CLIENT_ID")
-	os.Unsetenv("FLUME_CLIENT_SECRET")
-	os.Unsetenv("FLUME_USER_EMAIL")
-	os.Unsetenv("FLUME_USER_PASSWORD")
+	_ = os.Unsetenv("FLUME_CLIENT_ID")
+	_ = os.Unsetenv("FLUME_CLIENT_SECRET")
+	_ = os.Unsetenv("FLUME_USER_EMAIL")
+	_ = os.Unsetenv("FLUME_USER_PASSWORD")
 
 	// Load credentials
 	creds, err := LoadCredentialsFromEnv(envPath)
@@ -451,10 +431,10 @@ FLUME_USER_PASSWORD=test_password
 
 func TestLoadCredentialsFromEnv_MissingFile(t *testing.T) {
 	// Clear any existing environment variables
-	os.Unsetenv("FLUME_CLIENT_ID")
-	os.Unsetenv("FLUME_CLIENT_SECRET")
-	os.Unsetenv("FLUME_USER_EMAIL")
-	os.Unsetenv("FLUME_USER_PASSWORD")
+	_ = os.Unsetenv("FLUME_CLIENT_ID")
+	_ = os.Unsetenv("FLUME_CLIENT_SECRET")
+	_ = os.Unsetenv("FLUME_USER_EMAIL")
+	_ = os.Unsetenv("FLUME_USER_PASSWORD")
 
 	// Try to load from non-existent file
 	_, err := LoadCredentialsFromEnv("/nonexistent/path/.env")
@@ -481,7 +461,7 @@ FLUME_USER_PASSWORD=test_password
 		t.Fatalf("failed to create test .env file: %v", err)
 	}
 
-	os.Unsetenv("FLUME_CLIENT_ID")
+	_ = os.Unsetenv("FLUME_CLIENT_ID")
 
 	_, err := LoadCredentialsFromEnv(envPath)
 	if err == nil {
@@ -507,7 +487,7 @@ FLUME_USER_PASSWORD=test_password
 		t.Fatalf("failed to create test .env file: %v", err)
 	}
 
-	os.Unsetenv("FLUME_CLIENT_SECRET")
+	_ = os.Unsetenv("FLUME_CLIENT_SECRET")
 
 	_, err := LoadCredentialsFromEnv(envPath)
 	if err == nil {
@@ -533,7 +513,7 @@ FLUME_USER_PASSWORD=test_password
 		t.Fatalf("failed to create test .env file: %v", err)
 	}
 
-	os.Unsetenv("FLUME_USER_EMAIL")
+	_ = os.Unsetenv("FLUME_USER_EMAIL")
 
 	_, err := LoadCredentialsFromEnv(envPath)
 	if err == nil {
@@ -559,7 +539,7 @@ FLUME_USER_EMAIL=test@example.com
 		t.Fatalf("failed to create test .env file: %v", err)
 	}
 
-	os.Unsetenv("FLUME_USER_PASSWORD")
+	_ = os.Unsetenv("FLUME_USER_PASSWORD")
 
 	_, err := LoadCredentialsFromEnv(envPath)
 	if err == nil {
@@ -595,10 +575,10 @@ FLUME_USER_PASSWORD=test_password
 	}
 
 	// Clear any existing environment variables
-	os.Unsetenv("FLUME_CLIENT_ID")
-	os.Unsetenv("FLUME_CLIENT_SECRET")
-	os.Unsetenv("FLUME_USER_EMAIL")
-	os.Unsetenv("FLUME_USER_PASSWORD")
+	_ = os.Unsetenv("FLUME_CLIENT_ID")
+	_ = os.Unsetenv("FLUME_CLIENT_SECRET")
+	_ = os.Unsetenv("FLUME_USER_EMAIL")
+	_ = os.Unsetenv("FLUME_USER_PASSWORD")
 
 	// Create test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -618,9 +598,7 @@ FLUME_USER_PASSWORD=test_password
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			t.Errorf("Failed to encode response: %v", err)
-		}
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -651,10 +629,10 @@ FLUME_USER_PASSWORD=test_password
 func TestAuthenticateFromEnv_InvalidEnvFile(t *testing.T) {
 	client := NewClient()
 
-	os.Unsetenv("FLUME_CLIENT_ID")
-	os.Unsetenv("FLUME_CLIENT_SECRET")
-	os.Unsetenv("FLUME_USER_EMAIL")
-	os.Unsetenv("FLUME_USER_PASSWORD")
+	_ = os.Unsetenv("FLUME_CLIENT_ID")
+	_ = os.Unsetenv("FLUME_CLIENT_SECRET")
+	_ = os.Unsetenv("FLUME_USER_EMAIL")
+	_ = os.Unsetenv("FLUME_USER_PASSWORD")
 
 	_, err := client.AuthenticateFromEnv("/nonexistent/path/.env")
 	if err == nil {
@@ -708,9 +686,7 @@ func TestGetDevices_Success(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			t.Errorf("Failed to encode response: %v", err)
-		}
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -721,7 +697,7 @@ func TestGetDevices_Success(t *testing.T) {
 	}
 
 	// Test GetDevices
-	devices, err := client.GetDevices("test_access_token", "12345")
+	devices, err := client.GetDevices("test_access_token", "12345", nil)
 	if err != nil {
 		t.Fatalf("GetDevices() error = %v", err)
 	}
@@ -754,9 +730,7 @@ func TestGetDevices_APIError(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			t.Errorf("Failed to encode response: %v", err)
-		}
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -765,7 +739,7 @@ func TestGetDevices_APIError(t *testing.T) {
 		BaseURL:    server.URL,
 	}
 
-	_, err := client.GetDevices("invalid_token", "12345")
+	_, err := client.GetDevices("invalid_token", "12345", nil)
 	if err == nil {
 		t.Fatal("Expected error for API error response, got nil")
 	}
@@ -780,9 +754,7 @@ func TestGetDevices_HTTPError(t *testing.T) {
 	// Create test server that returns HTTP error
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		if _, err := w.Write([]byte("Internal Server Error")); err != nil {
-			t.Errorf("Failed to write response: %v", err)
-		}
+		_, _ = w.Write([]byte("Internal Server Error"))
 	}))
 	defer server.Close()
 
@@ -791,7 +763,7 @@ func TestGetDevices_HTTPError(t *testing.T) {
 		BaseURL:    server.URL,
 	}
 
-	_, err := client.GetDevices("test_token", "12345")
+	_, err := client.GetDevices("test_token", "12345", nil)
 	if err == nil {
 		t.Fatal("Expected error for HTTP error, got nil")
 	}
@@ -801,9 +773,7 @@ func TestGetDevices_InvalidJSON(t *testing.T) {
 	// Create test server that returns invalid JSON
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		if _, err := w.Write([]byte("invalid json")); err != nil {
-			t.Errorf("Failed to write response: %v", err)
-		}
+		_, _ = w.Write([]byte("invalid json"))
 	}))
 	defer server.Close()
 
@@ -812,13 +782,13 @@ func TestGetDevices_InvalidJSON(t *testing.T) {
 		BaseURL:    server.URL,
 	}
 
-	_, err := client.GetDevices("test_token", "12345")
+	_, err := client.GetDevices("test_token", "12345", nil)
 	if err == nil {
 		t.Fatal("Expected error for invalid JSON, got nil")
 	}
 }
 
-func TestGetDevicesByLocation_Success(t *testing.T) {
+func TestGetDevices_WithLocationFilter_Success(t *testing.T) {
 	// Create test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Verify request method and path
@@ -863,9 +833,7 @@ func TestGetDevicesByLocation_Success(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			t.Errorf("Failed to encode response: %v", err)
-		}
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -875,8 +843,10 @@ func TestGetDevicesByLocation_Success(t *testing.T) {
 		BaseURL:    server.URL,
 	}
 
-	// Test GetDevicesByLocation
-	devices, err := client.GetDevicesByLocation("test_access_token", "12345", "loc1")
+	// Test GetDevices with LocationID filter
+	params := DefaultDeviceListParams()
+	params.LocationID = "loc1"
+	devices, err := client.GetDevices("test_access_token", "12345", &params)
 	if err != nil {
 		t.Fatalf("GetDevicesByLocation() error = %v", err)
 	}
@@ -894,7 +864,7 @@ func TestGetDevicesByLocation_Success(t *testing.T) {
 	}
 }
 
-func TestGetDevicesByLocation_APIError(t *testing.T) {
+func TestGetDevices_WithLocationFilter_APIError(t *testing.T) {
 	// Create test server that returns an error
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		response := DevicesResponse{
@@ -905,9 +875,7 @@ func TestGetDevicesByLocation_APIError(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			t.Errorf("Failed to encode response: %v", err)
-		}
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -916,7 +884,9 @@ func TestGetDevicesByLocation_APIError(t *testing.T) {
 		BaseURL:    server.URL,
 	}
 
-	_, err := client.GetDevicesByLocation("test_token", "12345", "invalid_loc")
+	params := DefaultDeviceListParams()
+	params.LocationID = "invalid_loc"
+	_, err := client.GetDevices("test_token", "12345", &params)
 	if err == nil {
 		t.Fatal("Expected error for API error response, got nil")
 	}
@@ -927,13 +897,11 @@ func TestGetDevicesByLocation_APIError(t *testing.T) {
 	}
 }
 
-func TestGetDevicesByLocation_HTTPError(t *testing.T) {
+func TestGetDevices_WithLocationFilter_HTTPError(t *testing.T) {
 	// Create test server that returns HTTP error
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		if _, err := w.Write([]byte("Internal Server Error")); err != nil {
-			t.Errorf("Failed to write response: %v", err)
-		}
+		_, _ = w.Write([]byte("Internal Server Error"))
 	}))
 	defer server.Close()
 
@@ -942,7 +910,9 @@ func TestGetDevicesByLocation_HTTPError(t *testing.T) {
 		BaseURL:    server.URL,
 	}
 
-	_, err := client.GetDevicesByLocation("test_token", "12345", "loc1")
+	params := DefaultDeviceListParams()
+	params.LocationID = "loc1"
+	_, err := client.GetDevices("test_token", "12345", &params)
 	if err == nil {
 		t.Fatal("Expected error for HTTP error, got nil")
 	}
@@ -1004,9 +974,7 @@ func TestGetLocations_Success(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			t.Errorf("Failed to encode response: %v", err)
-		}
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -1017,7 +985,7 @@ func TestGetLocations_Success(t *testing.T) {
 	}
 
 	// Test GetLocations
-	locations, err := client.GetLocations("test_access_token", "12345")
+	locations, err := client.GetLocations("test_access_token", "12345", nil)
 	if err != nil {
 		t.Fatalf("GetLocations() error = %v", err)
 	}
@@ -1054,9 +1022,7 @@ func TestGetLocations_APIError(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			t.Errorf("Failed to encode response: %v", err)
-		}
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -1065,7 +1031,7 @@ func TestGetLocations_APIError(t *testing.T) {
 		BaseURL:    server.URL,
 	}
 
-	_, err := client.GetLocations("invalid_token", "12345")
+	_, err := client.GetLocations("invalid_token", "12345", nil)
 	if err == nil {
 		t.Fatal("Expected error for API error response, got nil")
 	}
@@ -1080,9 +1046,7 @@ func TestGetLocations_HTTPError(t *testing.T) {
 	// Create test server that returns HTTP error
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		if _, err := w.Write([]byte("Bad Request")); err != nil {
-			t.Errorf("Failed to write response: %v", err)
-		}
+		_, _ = w.Write([]byte("Bad Request"))
 	}))
 	defer server.Close()
 
@@ -1091,7 +1055,7 @@ func TestGetLocations_HTTPError(t *testing.T) {
 		BaseURL:    server.URL,
 	}
 
-	_, err := client.GetLocations("test_token", "12345")
+	_, err := client.GetLocations("test_token", "12345", nil)
 	if err == nil {
 		t.Fatal("Expected error for HTTP error, got nil")
 	}
@@ -1101,9 +1065,7 @@ func TestGetLocations_InvalidJSON(t *testing.T) {
 	// Create test server that returns invalid JSON
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		if _, err := w.Write([]byte("not valid json")); err != nil {
-			t.Errorf("Failed to write response: %v", err)
-		}
+		_, _ = w.Write([]byte("not valid json"))
 	}))
 	defer server.Close()
 
@@ -1112,7 +1074,7 @@ func TestGetLocations_InvalidJSON(t *testing.T) {
 		BaseURL:    server.URL,
 	}
 
-	_, err := client.GetLocations("test_token", "12345")
+	_, err := client.GetLocations("test_token", "12345", nil)
 	if err == nil {
 		t.Fatal("Expected error for invalid JSON, got nil")
 	}
@@ -1177,9 +1139,7 @@ func TestQueryDevice_Success(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			t.Errorf("Failed to encode response: %v", err)
-		}
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -1245,9 +1205,7 @@ func TestQueryDevice_APIError(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			t.Errorf("Failed to encode response: %v", err)
-		}
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
@@ -1279,9 +1237,7 @@ func TestQueryDevice_HTTPError(t *testing.T) {
 	// Create test server that returns HTTP error
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		if _, err := w.Write([]byte("Unauthorized")); err != nil {
-			t.Errorf("Failed to write response: %v", err)
-		}
+		_, _ = w.Write([]byte("Unauthorized"))
 	}))
 	defer server.Close()
 
@@ -1308,9 +1264,7 @@ func TestQueryDevice_InvalidJSON(t *testing.T) {
 	// Create test server that returns invalid JSON
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		if _, err := w.Write([]byte("invalid json response")); err != nil {
-			t.Errorf("Failed to write response: %v", err)
-		}
+		_, _ = w.Write([]byte("invalid json response"))
 	}))
 	defer server.Close()
 
@@ -1346,9 +1300,7 @@ func TestQueryDevice_EmptyQueries(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			t.Errorf("Failed to encode response: %v", err)
-		}
+		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
 
