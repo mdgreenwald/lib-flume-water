@@ -33,5 +33,9 @@ go.work.sum
 
 #MacOS
 .DS_Store
+
 # Added by goreleaser init:
 dist/
+
+#development
+notes/

@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 	"github.com/lestrrat-go/jwx/v3/jwt"
@@ -302,46 +304,60 @@ type LocationsResponse struct {
 	StatusMessage string     `json:"status_message"`
 }
 
-// GetDevices retrieves all devices for a user
-func (c *Client) GetDevices(accessToken, userID string) ([]Device, error) {
-	url := fmt.Sprintf("%s/users/%s/devices?limit=50&offset=0&sort_field=id&sort_direction=ASC&user=true&location=true&list_shared=true&primary_location=true", c.BaseURL, userID)
-
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", "Bearer "+accessToken)
-
-	resp, err := c.HTTPClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute request: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
-	}
-
-	var devicesResp DevicesResponse
-	if err := json.NewDecoder(resp.Body).Decode(&devicesResp); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
-	}
-
-	if !devicesResp.Success {
-		return nil, fmt.Errorf("API request failed: %s (code: %d)", devicesResp.Message, devicesResp.Code)
-	}
-
-	return devicesResp.Data, nil
+// DeviceListParams controls query parameters for device listing.
+// Use DefaultDeviceListParams() and override fields as needed.
+type DeviceListParams struct {
+	Limit           int
+	Offset          int
+	SortField       string
+	SortDirection   string
+	User            bool
+	Location        bool
+	ListShared      bool
+	PrimaryLocation bool
+	LocationID      string // optional filter by location
 }
 
-// GetDevicesByLocation retrieves all devices for a user at a specific location
-func (c *Client) GetDevicesByLocation(accessToken, userID, locationID string) ([]Device, error) {
-	url := fmt.Sprintf("%s/users/%s/devices?limit=50&offset=0&sort_field=id&sort_direction=ASC&user=true&location=true&list_shared=true&primary_location=true&location_id=%s", c.BaseURL, userID, locationID)
+// DefaultDeviceListParams returns DeviceListParams with sensible defaults.
+func DefaultDeviceListParams() DeviceListParams {
+	return DeviceListParams{
+		Limit:           50,
+		Offset:          0,
+		SortField:       "id",
+		SortDirection:   "ASC",
+		User:            true,
+		Location:        true,
+		ListShared:      true,
+		PrimaryLocation: true,
+	}
+}
 
-	req, err := http.NewRequest("GET", url, nil)
+func (p DeviceListParams) encode() string {
+	v := url.Values{}
+	v.Set("limit", strconv.Itoa(p.Limit))
+	v.Set("offset", strconv.Itoa(p.Offset))
+	v.Set("sort_field", p.SortField)
+	v.Set("sort_direction", p.SortDirection)
+	v.Set("user", strconv.FormatBool(p.User))
+	v.Set("location", strconv.FormatBool(p.Location))
+	v.Set("list_shared", strconv.FormatBool(p.ListShared))
+	v.Set("primary_location", strconv.FormatBool(p.PrimaryLocation))
+	if p.LocationID != "" {
+		v.Set("location_id", p.LocationID)
+	}
+	return v.Encode()
+}
+
+// GetDevices retrieves devices for a user. Pass nil to use default parameters.
+func (c *Client) GetDevices(accessToken, userID string, params *DeviceListParams) ([]Device, error) {
+	p := DefaultDeviceListParams()
+	if params != nil {
+		p = *params
+	}
+
+	reqURL := fmt.Sprintf("%s/users/%s/devices?%s", c.BaseURL, userID, p.encode())
+
+	req, err := http.NewRequest("GET", reqURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -409,11 +425,47 @@ type QueryResponse struct {
 	StatusMessage string        `json:"status_message"`
 }
 
-// GetLocations retrieves all locations for a user
-func (c *Client) GetLocations(accessToken, userID string) ([]Location, error) {
-	url := fmt.Sprintf("%s/users/%s/locations?limit=50&offset=0&sort_field=id&sort_direction=ASC&list_shared=true", c.BaseURL, userID)
+// LocationListParams controls query parameters for location listing.
+// Use DefaultLocationListParams() and override fields as needed.
+type LocationListParams struct {
+	Limit         int
+	Offset        int
+	SortField     string
+	SortDirection string
+	ListShared    bool
+}
 
-	req, err := http.NewRequest("GET", url, nil)
+// DefaultLocationListParams returns LocationListParams with sensible defaults.
+func DefaultLocationListParams() LocationListParams {
+	return LocationListParams{
+		Limit:         50,
+		Offset:        0,
+		SortField:     "id",
+		SortDirection: "ASC",
+		ListShared:    true,
+	}
+}
+
+func (p LocationListParams) encode() string {
+	v := url.Values{}
+	v.Set("limit", strconv.Itoa(p.Limit))
+	v.Set("offset", strconv.Itoa(p.Offset))
+	v.Set("sort_field", p.SortField)
+	v.Set("sort_direction", p.SortDirection)
+	v.Set("list_shared", strconv.FormatBool(p.ListShared))
+	return v.Encode()
+}
+
+// GetLocations retrieves locations for a user. Pass nil to use default parameters.
+func (c *Client) GetLocations(accessToken, userID string, params *LocationListParams) ([]Location, error) {
+	p := DefaultLocationListParams()
+	if params != nil {
+		p = *params
+	}
+
+	reqURL := fmt.Sprintf("%s/users/%s/locations?%s", c.BaseURL, userID, p.encode())
+
+	req, err := http.NewRequest("GET", reqURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}

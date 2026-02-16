@@ -26,7 +26,7 @@ func main() {
 
 	// Get locations
 	fmt.Println("2. Fetching locations...")
-	locations, err := client.GetLocations(authResult.AccessToken, authResult.UserID)
+	locations, err := client.GetLocations(authResult.AccessToken, authResult.UserID, nil)
 	if err != nil {
 		log.Fatalf("Failed to get locations: %v", err)
 	}
@@ -40,18 +40,20 @@ func main() {
 
 	// Get all devices
 	fmt.Println("3. Fetching all devices...")
-	devices, err := client.GetDevices(authResult.AccessToken, authResult.UserID)
+	devices, err := client.GetDevices(authResult.AccessToken, authResult.UserID, nil)
 	if err != nil {
 		log.Fatalf("Failed to get devices: %v", err)
 	}
 	fmt.Printf("✓ Found %d device(s):\n", len(devices))
 	for i, dev := range devices {
-		deviceType := "Unknown"
+		var deviceType string
 		switch dev.Type {
 		case 1:
 			deviceType = "Bridge"
 		case 2:
 			deviceType = "Sensor"
+		default:
+			deviceType = "Unknown"
 		}
 		fmt.Printf("  [%d] %s (ID: %s)\n", i+1, deviceType, dev.GetIDString())
 		fmt.Printf("      Product ID: %v\n", dev.ProductID)
@@ -64,18 +66,22 @@ func main() {
 	if len(locations) > 0 {
 		firstLocationID := locations[0].GetIDString()
 		fmt.Printf("4. Fetching devices for location '%s' (ID: %s)...\n", locations[0].Name, firstLocationID)
-		locationDevices, err := client.GetDevicesByLocation(authResult.AccessToken, authResult.UserID, firstLocationID)
+		params := flumewater.DefaultDeviceListParams()
+		params.LocationID = firstLocationID
+		locationDevices, err := client.GetDevices(authResult.AccessToken, authResult.UserID, &params)
 		if err != nil {
 			log.Fatalf("Failed to get devices by location: %v", err)
 		}
 		fmt.Printf("✓ Found %d device(s) at this location:\n", len(locationDevices))
 		for i, dev := range locationDevices {
-			deviceType := "Unknown"
+			var deviceType string
 			switch dev.Type {
 			case 1:
 				deviceType = "Bridge"
 			case 2:
 				deviceType = "Sensor"
+			default:
+				deviceType = "Unknown"
 			}
 			fmt.Printf("  [%d] %s (ID: %s)\n", i+1, deviceType, dev.GetIDString())
 		}
