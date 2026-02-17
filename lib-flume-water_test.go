@@ -1112,30 +1112,25 @@ func TestQueryDevice_Success(t *testing.T) {
 			t.Errorf("Expected 2 queries, got %d", len(queryReq.Queries))
 		}
 
-		// Send success response
-		response := QueryResponse{
-			Success: true,
-			Code:    200,
-			Message: "Success",
-			Data: []QueryResult{
+		// Send success response in actual Flume API format:
+		// data is an array with one object, keyed by request_id
+		response := map[string]interface{}{
+			"success": true,
+			"code":    200,
+			"message": "Success",
+			"data": []map[string]interface{}{
 				{
-					RequestID: "daily_usage",
-					Bucket:    "DAY",
-					Data: []QueryData{
-						{Datetime: "2025-11-01 00:00:00", Value: 123.45},
-						{Datetime: "2025-11-02 00:00:00", Value: 156.78},
+					"daily_usage": []map[string]interface{}{
+						{"datetime": "2025-11-01 00:00:00", "value": 123.45},
+						{"datetime": "2025-11-02 00:00:00", "value": 156.78},
 					},
-				},
-				{
-					RequestID: "monthly_usage",
-					Bucket:    "MON",
-					Data: []QueryData{
-						{Datetime: "2025-11-01 00:00:00", Value: 3450.12},
+					"monthly_usage": []map[string]interface{}{
+						{"datetime": "2025-11-01 00:00:00", "value": 3450.12},
 					},
 				},
 			},
-			StatusCode:    200,
-			StatusMessage: "OK",
+			"status_code":    200,
+			"status_message": "OK",
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -1173,35 +1168,40 @@ func TestQueryDevice_Success(t *testing.T) {
 		t.Errorf("Expected 2 results, got %d", len(results))
 	}
 
-	if results[0].RequestID != "daily_usage" {
-		t.Errorf("Result[0].RequestID = %s, want daily_usage", results[0].RequestID)
+	// Build a map for order-independent assertions (map iteration is unordered)
+	resultMap := make(map[string]QueryResult)
+	for _, r := range results {
+		resultMap[r.RequestID] = r
 	}
 
-	if results[0].Bucket != "DAY" {
-		t.Errorf("Result[0].Bucket = %s, want DAY", results[0].Bucket)
+	daily, ok := resultMap["daily_usage"]
+	if !ok {
+		t.Fatal("Expected result with RequestID 'daily_usage'")
+	}
+	if len(daily.Data) != 2 {
+		t.Errorf("Expected 2 data points for daily_usage, got %d", len(daily.Data))
+	}
+	if daily.Data[0].Value != 123.45 {
+		t.Errorf("daily_usage Data[0].Value = %f, want 123.45", daily.Data[0].Value)
 	}
 
-	if len(results[0].Data) != 2 {
-		t.Errorf("Expected 2 data points in result[0], got %d", len(results[0].Data))
+	monthly, ok := resultMap["monthly_usage"]
+	if !ok {
+		t.Fatal("Expected result with RequestID 'monthly_usage'")
 	}
-
-	if results[0].Data[0].Value != 123.45 {
-		t.Errorf("Result[0].Data[0].Value = %f, want 123.45", results[0].Data[0].Value)
-	}
-
-	if results[1].RequestID != "monthly_usage" {
-		t.Errorf("Result[1].RequestID = %s, want monthly_usage", results[1].RequestID)
+	if len(monthly.Data) != 1 {
+		t.Errorf("Expected 1 data point for monthly_usage, got %d", len(monthly.Data))
 	}
 }
 
 func TestQueryDevice_APIError(t *testing.T) {
 	// Create test server that returns an error
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		response := QueryResponse{
-			Success: false,
-			Code:    400,
-			Message: "Invalid query parameters",
-			Data:    []QueryResult{},
+		response := map[string]interface{}{
+			"success": false,
+			"code":    400,
+			"message": "Invalid query parameters",
+			"data":    []interface{}{},
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -1290,13 +1290,13 @@ func TestQueryDevice_InvalidJSON(t *testing.T) {
 func TestQueryDevice_EmptyQueries(t *testing.T) {
 	// Create test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		response := QueryResponse{
-			Success:       true,
-			Code:          200,
-			Message:       "Success",
-			Data:          []QueryResult{},
-			StatusCode:    200,
-			StatusMessage: "OK",
+		response := map[string]interface{}{
+			"success":        true,
+			"code":           200,
+			"message":        "Success",
+			"data":           []interface{}{},
+			"status_code":    200,
+			"status_message": "OK",
 		}
 
 		w.Header().Set("Content-Type", "application/json")
