@@ -73,9 +73,9 @@ func TestVersion(t *testing.T) {
 		t.Errorf("Version %s does not appear to follow semantic versioning", Version)
 	}
 
-	// Current version should be 0.1.0
-	if Version != "0.1.0" {
-		t.Errorf("Version = %s, want 0.1.0", Version)
+	// Current version should be 1.0.0
+	if Version != "1.0.0" {
+		t.Errorf("Version = %s, want 1.0.0", Version)
 	}
 }
 
