@@ -14,6 +14,10 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
+// ---------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------
+
 const (
 	// Version is the current version of the library
 	Version = "0.1.0"
@@ -21,6 +25,28 @@ const (
 	// FlumeAPIURL is the base URL for the Flume API
 	FlumeAPIURL = "https://api.flumewater.com"
 )
+
+// ---------------------------------------------------------------------
+// Client
+// ---------------------------------------------------------------------
+
+// Client represents a Flume API client
+type Client struct {
+	HTTPClient *http.Client
+	BaseURL    string
+}
+
+// Credentials represents the credentials loaded from .env file
+type Credentials struct {
+	ClientID     string
+	ClientSecret string
+	UserEmail    string
+	UserPassword string
+}
+
+// ---------------------------------------------------------------------
+// Authentication types
+// ---------------------------------------------------------------------
 
 // AuthRequest represents the authentication request payload
 type AuthRequest struct {
@@ -55,19 +81,135 @@ type AuthResult struct {
 	UserID       string
 }
 
-// Client represents a Flume API client
-type Client struct {
-	HTTPClient *http.Client
-	BaseURL    string
+// ---------------------------------------------------------------------
+// Device types
+// ---------------------------------------------------------------------
+
+// Device represents a Flume device
+type Device struct {
+	ID                interface{} `json:"id"`
+	Type              int         `json:"type"` // 1 = Bridge, 2 = Sensor
+	ProductID         interface{} `json:"product_id"`
+	LocationID        interface{} `json:"location_id"`
+	UserID            interface{} `json:"user_id"`
+	ConnectedDevice   interface{} `json:"connected_device"`
+	BatteryLevel      interface{} `json:"battery_level"`
+	LastSeen          string      `json:"last_seen"`
+	ConnectedDatetime string      `json:"connected_datetime"`
 }
 
-// Credentials represents the credentials loaded from .env file
-type Credentials struct {
-	ClientID     string
-	ClientSecret string
-	UserEmail    string
-	UserPassword string
+// DevicesResponse represents the API response for devices
+type DevicesResponse struct {
+	Success       bool     `json:"success"`
+	Code          int      `json:"code"`
+	Message       string   `json:"message"`
+	Data          []Device `json:"data"`
+	Count         int      `json:"count"`
+	StatusCode    int      `json:"status_code"`
+	StatusMessage string   `json:"status_message"`
 }
+
+// DeviceListParams controls query parameters for device listing.
+// Use DefaultDeviceListParams() and override fields as needed.
+type DeviceListParams struct {
+	Limit           int
+	Offset          int
+	SortField       string
+	SortDirection   string
+	User            bool
+	Location        bool
+	ListShared      bool
+	PrimaryLocation bool
+	LocationID      string // optional filter by location
+}
+
+// ---------------------------------------------------------------------
+// Location types
+// ---------------------------------------------------------------------
+
+// Location represents a Flume location
+type Location struct {
+	ID          interface{} `json:"id"`
+	Name        string      `json:"name"`
+	Address     string      `json:"address"`
+	Address2    string      `json:"address2"`
+	City        string      `json:"city"`
+	State       string      `json:"state"`
+	PostalCode  string      `json:"postal_code"`
+	Country     string      `json:"country"`
+	Timezone    string      `json:"tz"`
+	UserID      interface{} `json:"user_id"`
+	UtilityType string      `json:"utility_type"`
+	AwayMode    interface{} `json:"away_mode"`
+}
+
+// LocationsResponse represents the API response for locations
+type LocationsResponse struct {
+	Success       bool       `json:"success"`
+	Code          int        `json:"code"`
+	Message       string     `json:"message"`
+	Data          []Location `json:"data"`
+	Count         int        `json:"count"`
+	StatusCode    int        `json:"status_code"`
+	StatusMessage string     `json:"status_message"`
+}
+
+// LocationListParams controls query parameters for location listing.
+// Use DefaultLocationListParams() and override fields as needed.
+type LocationListParams struct {
+	Limit         int
+	Offset        int
+	SortField     string
+	SortDirection string
+	ListShared    bool
+}
+
+// ---------------------------------------------------------------------
+// Query types
+// ---------------------------------------------------------------------
+
+// Query represents a single query in a device query request
+type Query struct {
+	RequestID       string `json:"request_id"`
+	Bucket          string `json:"bucket"`
+	SinceDatetime   string `json:"since_datetime"`
+	UntilDatetime   string `json:"until_datetime,omitempty"`
+	GroupMultiplier int    `json:"group_multiplier,omitempty"`
+}
+
+// QueryRequest represents the request body for querying a device
+type QueryRequest struct {
+	Queries []Query `json:"queries"`
+}
+
+// QueryData represents the data points returned for a query
+type QueryData struct {
+	Datetime string  `json:"datetime"`
+	Value    float64 `json:"value"`
+}
+
+// QueryResult represents the result of a single query
+type QueryResult struct {
+	RequestID string      `json:"request_id"`
+	Bucket    string      `json:"bucket"`
+	Data      []QueryData `json:"data"`
+}
+
+// queryResponse represents the raw API response for device queries.
+// The Data field is an array containing a single object where keys are
+// request IDs and values are arrays of QueryData.
+type queryResponse struct {
+	Success       bool                         `json:"success"`
+	Code          int                          `json:"code"`
+	Message       string                       `json:"message"`
+	Data          []map[string]json.RawMessage `json:"data"`
+	StatusCode    int                          `json:"status_code"`
+	StatusMessage string                       `json:"status_message"`
+}
+
+// ---------------------------------------------------------------------
+// Functions
+// ---------------------------------------------------------------------
 
 // NewClient creates a new Flume API client
 func NewClient() *Client {
@@ -75,6 +217,92 @@ func NewClient() *Client {
 		HTTPClient: http.DefaultClient,
 		BaseURL:    FlumeAPIURL,
 	}
+}
+
+// interfaceToString converts an interface{} value to string
+// Handles string, int, int64, float64 types
+func interfaceToString(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	switch val := v.(type) {
+	case string:
+		return val
+	case float64:
+		return fmt.Sprintf("%.0f", val)
+	case int:
+		return fmt.Sprintf("%d", val)
+	case int64:
+		return fmt.Sprintf("%d", val)
+	default:
+		return fmt.Sprintf("%v", v)
+	}
+}
+
+// GetIDString returns the ID as a string
+func (d *Device) GetIDString() string {
+	return interfaceToString(d.ID)
+}
+
+// GetLocationIDString returns the LocationID as a string
+func (d *Device) GetLocationIDString() string {
+	return interfaceToString(d.LocationID)
+}
+
+// GetIDString returns the ID as a string
+func (l *Location) GetIDString() string {
+	return interfaceToString(l.ID)
+}
+
+// DefaultDeviceListParams returns DeviceListParams with sensible defaults.
+func DefaultDeviceListParams() DeviceListParams {
+	return DeviceListParams{
+		Limit:           50,
+		Offset:          0,
+		SortField:       "id",
+		SortDirection:   "ASC",
+		User:            true,
+		Location:        true,
+		ListShared:      true,
+		PrimaryLocation: true,
+	}
+}
+
+func (p DeviceListParams) encode() string {
+	v := url.Values{}
+	v.Set("limit", strconv.Itoa(p.Limit))
+	v.Set("offset", strconv.Itoa(p.Offset))
+	v.Set("sort_field", p.SortField)
+	v.Set("sort_direction", p.SortDirection)
+	v.Set("user", strconv.FormatBool(p.User))
+	v.Set("location", strconv.FormatBool(p.Location))
+	v.Set("list_shared", strconv.FormatBool(p.ListShared))
+	v.Set("primary_location", strconv.FormatBool(p.PrimaryLocation))
+	if p.LocationID != "" {
+		v.Set("location_id", p.LocationID)
+	}
+	return v.Encode()
+}
+
+// DefaultLocationListParams returns LocationListParams with sensible defaults.
+func DefaultLocationListParams() LocationListParams {
+	return LocationListParams{
+		Limit:         50,
+		Offset:        0,
+		SortField:     "id",
+		SortDirection: "ASC",
+		ListShared:    true,
+	}
+}
+
+func (p LocationListParams) encode() string {
+	v := url.Values{}
+	v.Set("limit", strconv.Itoa(p.Limit))
+	v.Set("offset", strconv.Itoa(p.Offset))
+	v.Set("sort_field", p.SortField)
+	v.Set("sort_direction", p.SortDirection)
+	v.Set("list_shared", strconv.FormatBool(p.ListShared))
+	return v.Encode()
 }
 
 // Authenticate authenticates with the Flume API and returns tokens and user ID
@@ -218,136 +446,6 @@ func (c *Client) AuthenticateFromEnv(envPath string) (*AuthResult, error) {
 	return c.Authenticate(creds.ClientID, creds.ClientSecret, creds.UserEmail, creds.UserPassword)
 }
 
-// Device represents a Flume device
-type Device struct {
-	ID                interface{} `json:"id"`
-	Type              int         `json:"type"` // 1 = Bridge, 2 = Sensor
-	ProductID         interface{} `json:"product_id"`
-	LocationID        interface{} `json:"location_id"`
-	UserID            interface{} `json:"user_id"`
-	ConnectedDevice   interface{} `json:"connected_device"`
-	BatteryLevel      interface{} `json:"battery_level"`
-	LastSeen          string      `json:"last_seen"`
-	ConnectedDatetime string      `json:"connected_datetime"`
-}
-
-// Location represents a Flume location
-type Location struct {
-	ID          interface{} `json:"id"`
-	Name        string      `json:"name"`
-	Address     string      `json:"address"`
-	Address2    string      `json:"address2"`
-	City        string      `json:"city"`
-	State       string      `json:"state"`
-	PostalCode  string      `json:"postal_code"`
-	Country     string      `json:"country"`
-	Timezone    string      `json:"tz"`
-	UserID      interface{} `json:"user_id"`
-	UtilityType string      `json:"utility_type"`
-	AwayMode    interface{} `json:"away_mode"`
-}
-
-// GetIDString returns the ID as a string
-func (d *Device) GetIDString() string {
-	return interfaceToString(d.ID)
-}
-
-// GetLocationIDString returns the LocationID as a string
-func (d *Device) GetLocationIDString() string {
-	return interfaceToString(d.LocationID)
-}
-
-// GetIDString returns the ID as a string
-func (l *Location) GetIDString() string {
-	return interfaceToString(l.ID)
-}
-
-// interfaceToString converts an interface{} value to string
-// Handles string, int, int64, float64 types
-func interfaceToString(v interface{}) string {
-	if v == nil {
-		return ""
-	}
-	switch val := v.(type) {
-	case string:
-		return val
-	case float64:
-		return fmt.Sprintf("%.0f", val)
-	case int:
-		return fmt.Sprintf("%d", val)
-	case int64:
-		return fmt.Sprintf("%d", val)
-	default:
-		return fmt.Sprintf("%v", v)
-	}
-}
-
-// DevicesResponse represents the API response for devices
-type DevicesResponse struct {
-	Success       bool     `json:"success"`
-	Code          int      `json:"code"`
-	Message       string   `json:"message"`
-	Data          []Device `json:"data"`
-	Count         int      `json:"count"`
-	StatusCode    int      `json:"status_code"`
-	StatusMessage string   `json:"status_message"`
-}
-
-// LocationsResponse represents the API response for locations
-type LocationsResponse struct {
-	Success       bool       `json:"success"`
-	Code          int        `json:"code"`
-	Message       string     `json:"message"`
-	Data          []Location `json:"data"`
-	Count         int        `json:"count"`
-	StatusCode    int        `json:"status_code"`
-	StatusMessage string     `json:"status_message"`
-}
-
-// DeviceListParams controls query parameters for device listing.
-// Use DefaultDeviceListParams() and override fields as needed.
-type DeviceListParams struct {
-	Limit           int
-	Offset          int
-	SortField       string
-	SortDirection   string
-	User            bool
-	Location        bool
-	ListShared      bool
-	PrimaryLocation bool
-	LocationID      string // optional filter by location
-}
-
-// DefaultDeviceListParams returns DeviceListParams with sensible defaults.
-func DefaultDeviceListParams() DeviceListParams {
-	return DeviceListParams{
-		Limit:           50,
-		Offset:          0,
-		SortField:       "id",
-		SortDirection:   "ASC",
-		User:            true,
-		Location:        true,
-		ListShared:      true,
-		PrimaryLocation: true,
-	}
-}
-
-func (p DeviceListParams) encode() string {
-	v := url.Values{}
-	v.Set("limit", strconv.Itoa(p.Limit))
-	v.Set("offset", strconv.Itoa(p.Offset))
-	v.Set("sort_field", p.SortField)
-	v.Set("sort_direction", p.SortDirection)
-	v.Set("user", strconv.FormatBool(p.User))
-	v.Set("location", strconv.FormatBool(p.Location))
-	v.Set("list_shared", strconv.FormatBool(p.ListShared))
-	v.Set("primary_location", strconv.FormatBool(p.PrimaryLocation))
-	if p.LocationID != "" {
-		v.Set("location_id", p.LocationID)
-	}
-	return v.Encode()
-}
-
 // GetDevices retrieves devices for a user. Pass nil to use default parameters.
 func (c *Client) GetDevices(accessToken, userID string, params *DeviceListParams) ([]Device, error) {
 	p := DefaultDeviceListParams()
@@ -386,74 +484,6 @@ func (c *Client) GetDevices(accessToken, userID string, params *DeviceListParams
 	}
 
 	return devicesResp.Data, nil
-}
-
-// Query represents a single query in a device query request
-type Query struct {
-	RequestID       string `json:"request_id"`
-	Bucket          string `json:"bucket"`
-	SinceDatetime   string `json:"since_datetime"`
-	UntilDatetime   string `json:"until_datetime,omitempty"`
-	GroupMultiplier int    `json:"group_multiplier,omitempty"`
-}
-
-// QueryRequest represents the request body for querying a device
-type QueryRequest struct {
-	Queries []Query `json:"queries"`
-}
-
-// QueryData represents the data points returned for a query
-type QueryData struct {
-	Datetime string  `json:"datetime"`
-	Value    float64 `json:"value"`
-}
-
-// QueryResult represents the result of a single query
-type QueryResult struct {
-	RequestID string      `json:"request_id"`
-	Bucket    string      `json:"bucket"`
-	Data      []QueryData `json:"data"`
-}
-
-// QueryResponse represents the API response for device queries
-type QueryResponse struct {
-	Success       bool          `json:"success"`
-	Code          int           `json:"code"`
-	Message       string        `json:"message"`
-	Data          []QueryResult `json:"data"`
-	StatusCode    int           `json:"status_code"`
-	StatusMessage string        `json:"status_message"`
-}
-
-// LocationListParams controls query parameters for location listing.
-// Use DefaultLocationListParams() and override fields as needed.
-type LocationListParams struct {
-	Limit         int
-	Offset        int
-	SortField     string
-	SortDirection string
-	ListShared    bool
-}
-
-// DefaultLocationListParams returns LocationListParams with sensible defaults.
-func DefaultLocationListParams() LocationListParams {
-	return LocationListParams{
-		Limit:         50,
-		Offset:        0,
-		SortField:     "id",
-		SortDirection: "ASC",
-		ListShared:    true,
-	}
-}
-
-func (p LocationListParams) encode() string {
-	v := url.Values{}
-	v.Set("limit", strconv.Itoa(p.Limit))
-	v.Set("offset", strconv.Itoa(p.Offset))
-	v.Set("sort_field", p.SortField)
-	v.Set("sort_direction", p.SortDirection)
-	v.Set("list_shared", strconv.FormatBool(p.ListShared))
-	return v.Encode()
 }
 
 // GetLocations retrieves locations for a user. Pass nil to use default parameters.
@@ -530,7 +560,7 @@ func (c *Client) QueryDevice(accessToken, userID, deviceID string, queries []Que
 		return nil, fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
-	var queryResp QueryResponse
+	var queryResp queryResponse
 	if err := json.NewDecoder(resp.Body).Decode(&queryResp); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
@@ -539,5 +569,21 @@ func (c *Client) QueryDevice(accessToken, userID, deviceID string, queries []Que
 		return nil, fmt.Errorf("API request failed: %s (code: %d)", queryResp.Message, queryResp.Code)
 	}
 
-	return queryResp.Data, nil
+	// The API returns data as [{"request_id_1": [...], "request_id_2": [...]}]
+	// Convert this into []QueryResult for a cleaner interface.
+	var results []QueryResult
+	if len(queryResp.Data) > 0 {
+		for key, raw := range queryResp.Data[0] {
+			var dataPoints []QueryData
+			if err := json.Unmarshal(raw, &dataPoints); err != nil {
+				return nil, fmt.Errorf("failed to decode query data for %q: %w", key, err)
+			}
+			results = append(results, QueryResult{
+				RequestID: key,
+				Data:      dataPoints,
+			})
+		}
+	}
+
+	return results, nil
 }

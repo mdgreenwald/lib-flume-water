@@ -5,6 +5,18 @@ golangci-lint = 'latest'
 goreleaser = "latest"
 pre-commit = 'latest'
 
+[tasks.fmt]
+description = "Format Go source files"
+run = ["gofmt -w ."]
+
+[tasks.test]
+description = "Run tests"
+run = ["go test -v"]
+
+[tasks.lint]
+description = "Run linter"
+run = ["golangci-lint run"]
+
 [tasks.ci]
 description = "Run pre-commit on all files"
-run = "pre-commit run --all-files"
+run = ["pre-commit run --all-files"]

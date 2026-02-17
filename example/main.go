@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"strings"
+	"time"
 
 	flumewater "github.com/mdgreenwald/lib-flume-water"
 )
@@ -104,13 +106,14 @@ func main() {
 			fmt.Printf("5. Querying water usage for device %s...\n", deviceID)
 
 			// Query last 30 days of daily usage
-			// Note: Adjust these dates based on your actual data availability
+			now := time.Now()
+			since := now.AddDate(0, 0, -30)
 			queries := []flumewater.Query{
 				{
 					RequestID:     "last_30_days",
 					Bucket:        "DAY",
-					SinceDatetime: "2025-10-10 00:00:00",
-					UntilDatetime: "2025-11-10 00:00:00",
+					SinceDatetime: since.Format("2006-01-02 15:04:05"),
+					UntilDatetime: now.Format("2006-01-02 15:04:05"),
 				},
 			}
 
@@ -120,11 +123,12 @@ func main() {
 			} else {
 				fmt.Printf("✓ Query results:\n")
 				for _, result := range results {
-					fmt.Printf("  Request ID: %s (Bucket: %s)\n", result.RequestID, result.Bucket)
+					fmt.Printf("  Request ID: %s\n", result.RequestID)
 					if len(result.Data) > 0 {
 						fmt.Printf("  Found %d data points:\n", len(result.Data))
 						for _, dataPoint := range result.Data {
-							fmt.Printf("    - %s: %.2f gallons\n", dataPoint.Datetime, dataPoint.Value)
+							date := strings.TrimSuffix(dataPoint.Datetime, " 00:00:00")
+							fmt.Printf("    - %s: %9.2f gallons\n", date, dataPoint.Value)
 						}
 					} else {
 						fmt.Printf("  No data points found for this period\n")
