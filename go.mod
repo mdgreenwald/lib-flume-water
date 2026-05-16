@@ -1,8 +1,6 @@
 module github.com/mdgreenwald/lib-flume-water
 
-go 1.24.0
-
-toolchain go1.24.7
+go 1.26.0
 
 require (
 	github.com/joho/godotenv v1.5.1
