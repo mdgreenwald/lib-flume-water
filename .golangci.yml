@@ -1,0 +1,33 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: standard
+  enable:
+    - bodyclose
+    - misspell
+    - revive
+    - unconvert
+    - unparam
+  settings:
+    revive:
+      rules:
+        - name: exported
+          arguments:
+            - disableStutteringCheck
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - bodyclose
+          - unparam
+      - path: ^example/
+        linters:
+          - errcheck
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
