@@ -20,7 +20,7 @@ import (
 
 const (
 	// Version is the current version of the library
-	Version = "1.0.0"
+	Version = "1.1.0"
 
 	// FlumeAPIURL is the base URL for the Flume API
 	FlumeAPIURL = "https://api.flumewater.com"
