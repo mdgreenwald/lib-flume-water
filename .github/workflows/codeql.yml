@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: '39 21 * * 6'
+    - cron: '39 21 1 * *'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
