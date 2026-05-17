@@ -90,10 +90,55 @@ Authenticates using credentials from a `.env` file. Pass an empty string to use 
 authResult, err := client.AuthenticateFromEnv(".env")
 ```
 
+#### `RefreshToken(clientID, clientSecret, refreshToken string) (*AuthResult, error)`
+
+Exchanges a refresh token for a new access token. Use `ExpiresAt` on the
+returned result to decide when to refresh next. Always persist the
+`RefreshToken` from the returned result in place of the prior one — the Flume
+API may rotate it.
+
+```go
+newAuth, err := client.RefreshToken(
+    "client_id",
+    "client_secret",
+    storedAuth.RefreshToken,
+)
+```
+
 **Returns**: `AuthResult` containing:
 - `AccessToken` - OAuth2 access token for API requests
-- `RefreshToken` - Token for refreshing access
+- `RefreshToken` - Token for refreshing access (overwrite any previously stored value)
 - `UserID` - The authenticated user's ID
+- `ExpiresAt` - Absolute `time.Time` at which `AccessToken` expires
+
+### Handling token refresh
+
+The library is stateless: it does not store tokens or refresh them
+automatically. Consumers own that policy. A minimal wrapper that refreshes
+ahead of expiry:
+
+```go
+type Session struct {
+    client       *flumewater.Client
+    clientID     string
+    clientSecret string
+    auth         *flumewater.AuthResult
+}
+
+// Token returns a non-expired access token, refreshing if needed.
+func (s *Session) Token() (string, error) {
+    // Refresh 60s before expiry to absorb clock skew and request latency.
+    if time.Now().Add(60 * time.Second).Before(s.auth.ExpiresAt) {
+        return s.auth.AccessToken, nil
+    }
+    next, err := s.client.RefreshToken(s.clientID, s.clientSecret, s.auth.RefreshToken)
+    if err != nil {
+        return "", err
+    }
+    s.auth = next // persist next.RefreshToken alongside; Flume may rotate it
+    return s.auth.AccessToken, nil
+}
+```
 
 ### Devices
 
