@@ -73,9 +73,9 @@ func TestVersion(t *testing.T) {
 		t.Errorf("Version %s does not appear to follow semantic versioning", Version)
 	}
 
-	// Current version should be 1.1.0
-	if Version != "1.1.0" {
-		t.Errorf("Version = %s, want 1.1.0", Version)
+	// Current version should be 1.2.0
+	if Version != "1.2.0" {
+		t.Errorf("Version = %s, want 1.2.0", Version)
 	}
 }
 
@@ -156,10 +156,12 @@ func TestAuthenticate_Success(t *testing.T) {
 	}
 
 	// Test authentication
+	before := time.Now()
 	result, err := client.Authenticate("test_client_id", "test_client_secret", "test@example.com", "test_password")
 	if err != nil {
 		t.Fatalf("Authenticate() error = %v", err)
 	}
+	after := time.Now()
 
 	if result.AccessToken != testAccessToken {
 		t.Errorf("AccessToken = %s, want %s", result.AccessToken, testAccessToken)
@@ -171,6 +173,13 @@ func TestAuthenticate_Success(t *testing.T) {
 
 	if result.UserID != testUserID {
 		t.Errorf("UserID = %s, want %s", result.UserID, testUserID)
+	}
+
+	// ExpiresAt should be ~86400s in the future, between [before+86400s, after+86400s]
+	expectedMin := before.Add(86400 * time.Second)
+	expectedMax := after.Add(86400 * time.Second)
+	if result.ExpiresAt.Before(expectedMin) || result.ExpiresAt.After(expectedMax) {
+		t.Errorf("ExpiresAt = %v, want between %v and %v", result.ExpiresAt, expectedMin, expectedMax)
 	}
 }
 
@@ -384,6 +393,198 @@ func TestAuthenticate_MissingUserID(t *testing.T) {
 	expectedError := "user_id not found in JWT token"
 	if !strings.Contains(err.Error(), expectedError) {
 		t.Errorf("Error = %s, want it to contain %s", err.Error(), expectedError)
+	}
+}
+
+func TestRefreshToken_Success(t *testing.T) {
+	testUserID := "12345"
+	testAccessToken, err := createTestJWT(testUserID)
+	if err != nil {
+		t.Fatalf("failed to create test JWT: %v", err)
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			t.Errorf("Expected POST request, got %s", r.Method)
+		}
+		if r.URL.Path != "/oauth/token" {
+			t.Errorf("Expected path /oauth/token, got %s", r.URL.Path)
+		}
+		if r.Header.Get("Content-Type") != "application/json" {
+			t.Errorf("Expected Content-Type application/json, got %s", r.Header.Get("Content-Type"))
+		}
+
+		var body map[string]string
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Errorf("Failed to decode request body: %v", err)
+		}
+		if body["grant_type"] != "refresh_token" {
+			t.Errorf("Expected grant_type refresh_token, got %s", body["grant_type"])
+		}
+		if body["refresh_token"] != "old_refresh_token" {
+			t.Errorf("Expected refresh_token old_refresh_token, got %s", body["refresh_token"])
+		}
+		if body["client_id"] != "test_client_id" {
+			t.Errorf("Expected client_id test_client_id, got %s", body["client_id"])
+		}
+		if body["client_secret"] != "test_client_secret" {
+			t.Errorf("Expected client_secret test_client_secret, got %s", body["client_secret"])
+		}
+
+		response := AuthResponse{
+			Success: true,
+			Code:    602,
+			Message: "Request OK",
+			Data: []TokenData{
+				{
+					TokenType:    "bearer",
+					AccessToken:  testAccessToken,
+					ExpiresIn:    604800,
+					RefreshToken: "new_refresh_token",
+					UserID:       testUserID,
+				},
+			},
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client := &Client{
+		HTTPClient: http.DefaultClient,
+		BaseURL:    server.URL,
+	}
+
+	before := time.Now()
+	result, err := client.RefreshToken("test_client_id", "test_client_secret", "old_refresh_token")
+	if err != nil {
+		t.Fatalf("RefreshToken() error = %v", err)
+	}
+	after := time.Now()
+
+	if result.AccessToken != testAccessToken {
+		t.Errorf("AccessToken = %s, want %s", result.AccessToken, testAccessToken)
+	}
+	if result.RefreshToken != "new_refresh_token" {
+		t.Errorf("RefreshToken = %s, want new_refresh_token", result.RefreshToken)
+	}
+	if result.UserID != testUserID {
+		t.Errorf("UserID = %s, want %s", result.UserID, testUserID)
+	}
+
+	expectedMin := before.Add(604800 * time.Second)
+	expectedMax := after.Add(604800 * time.Second)
+	if result.ExpiresAt.Before(expectedMin) || result.ExpiresAt.After(expectedMax) {
+		t.Errorf("ExpiresAt = %v, want between %v and %v", result.ExpiresAt, expectedMin, expectedMax)
+	}
+}
+
+func TestRefreshToken_FailedRefresh(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		response := AuthResponse{
+			Success: false,
+			Code:    400,
+			Message: "invalid_client",
+			Data:    []TokenData{},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client := &Client{
+		HTTPClient: http.DefaultClient,
+		BaseURL:    server.URL,
+	}
+
+	_, err := client.RefreshToken("bad_client", "bad_secret", "stale_refresh_token")
+	if err == nil {
+		t.Fatal("Expected error for failed refresh, got nil")
+	}
+
+	expectedError := "authentication failed: invalid_client (code: 400)"
+	if err.Error() != expectedError {
+		t.Errorf("Error = %s, want %s", err.Error(), expectedError)
+	}
+}
+
+func TestRefreshToken_EmptyData(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		response := AuthResponse{
+			Success: true,
+			Code:    602,
+			Message: "Request OK",
+			Data:    []TokenData{},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client := &Client{
+		HTTPClient: http.DefaultClient,
+		BaseURL:    server.URL,
+	}
+
+	_, err := client.RefreshToken("test_client_id", "test_client_secret", "refresh_token")
+	if err == nil {
+		t.Fatal("Expected error for empty data, got nil")
+	}
+
+	expectedError := "no authentication data returned"
+	if err.Error() != expectedError {
+		t.Errorf("Error = %s, want %s", err.Error(), expectedError)
+	}
+}
+
+func TestRefreshToken_InvalidJSON(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte("invalid json"))
+	}))
+	defer server.Close()
+
+	client := &Client{
+		HTTPClient: http.DefaultClient,
+		BaseURL:    server.URL,
+	}
+
+	_, err := client.RefreshToken("test_client_id", "test_client_secret", "refresh_token")
+	if err == nil {
+		t.Fatal("Expected error for invalid JSON, got nil")
+	}
+}
+
+func TestRefreshToken_InvalidJWT(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		response := AuthResponse{
+			Success: true,
+			Code:    602,
+			Message: "Request OK",
+			Data: []TokenData{
+				{
+					TokenType:    "bearer",
+					AccessToken:  "invalid.jwt.token",
+					ExpiresIn:    604800,
+					RefreshToken: "new_refresh_token",
+					UserID:       "12345",
+				},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(response)
+	}))
+	defer server.Close()
+
+	client := &Client{
+		HTTPClient: http.DefaultClient,
+		BaseURL:    server.URL,
+	}
+
+	_, err := client.RefreshToken("test_client_id", "test_client_secret", "refresh_token")
+	if err == nil {
+		t.Fatal("Expected error for invalid JWT, got nil")
 	}
 }
 

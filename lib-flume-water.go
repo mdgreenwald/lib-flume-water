@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/lestrrat-go/jwx/v3/jwt"
@@ -20,7 +21,7 @@ import (
 
 const (
 	// Version is the current version of the library
-	Version = "1.1.0"
+	Version = "1.2.0"
 
 	// FlumeAPIURL is the base URL for the Flume API
 	FlumeAPIURL = "https://api.flumewater.com"
@@ -57,6 +58,14 @@ type AuthRequest struct {
 	Password     string `json:"password"`
 }
 
+// refreshRequest represents the refresh-token request payload
+type refreshRequest struct {
+	GrantType    string `json:"grant_type"`
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+	RefreshToken string `json:"refresh_token"`
+}
+
 // TokenData represents the token data in the response
 type TokenData struct {
 	TokenType    string      `json:"token_type"`
@@ -79,6 +88,9 @@ type AuthResult struct {
 	AccessToken  string
 	RefreshToken string
 	UserID       string
+	// ExpiresAt is the absolute time at which AccessToken expires, computed
+	// from the response's expires_in at the moment the response was received.
+	ExpiresAt time.Time
 }
 
 // ---------------------------------------------------------------------
@@ -307,23 +319,39 @@ func (p LocationListParams) encode() string {
 
 // Authenticate authenticates with the Flume API and returns tokens and user ID
 func (c *Client) Authenticate(clientID, clientSecret, userEmail, userPassword string) (*AuthResult, error) {
-	// Prepare request payload
-	authReq := AuthRequest{
+	return c.postTokenRequest(AuthRequest{
 		GrantType:    "password",
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 		Username:     userEmail,
 		Password:     userPassword,
-	}
+	})
+}
 
-	payloadBytes, err := json.Marshal(authReq)
+// RefreshToken exchanges a refresh token for a new access token. The returned
+// AuthResult contains a fresh AccessToken, the refresh_token returned by the
+// server (which callers should persist in place of the prior one), the UserID
+// parsed from the new access token, and ExpiresAt.
+func (c *Client) RefreshToken(clientID, clientSecret, refreshToken string) (*AuthResult, error) {
+	return c.postTokenRequest(refreshRequest{
+		GrantType:    "refresh_token",
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		RefreshToken: refreshToken,
+	})
+}
+
+// postTokenRequest sends a token request payload to /oauth/token, parses the
+// envelope and JWT, and returns an AuthResult. Shared by Authenticate and
+// RefreshToken.
+func (c *Client) postTokenRequest(payload any) (*AuthResult, error) {
+	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal auth request: %w", err)
 	}
 
-	// Create HTTP request
-	url := fmt.Sprintf("%s/oauth/token?envelope=true", c.BaseURL)
-	req, err := http.NewRequest("POST", url, bytes.NewReader(payloadBytes))
+	reqURL := fmt.Sprintf("%s/oauth/token?envelope=true", c.BaseURL)
+	req, err := http.NewRequest("POST", reqURL, bytes.NewReader(payloadBytes))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -331,26 +359,22 @@ func (c *Client) Authenticate(clientID, clientSecret, userEmail, userPassword st
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 
-	// Execute request
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	// Read response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	// Parse response
 	var authResp AuthResponse
 	if err := json.Unmarshal(body, &authResp); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
-	// Check for errors
 	if !authResp.Success {
 		return nil, fmt.Errorf("authentication failed: %s (code: %d)", authResp.Message, authResp.Code)
 	}
@@ -360,20 +384,18 @@ func (c *Client) Authenticate(clientID, clientSecret, userEmail, userPassword st
 	}
 
 	tokenData := authResp.Data[0]
+	expiresAt := time.Now().Add(time.Duration(tokenData.ExpiresIn) * time.Second)
 
-	// Parse JWT to extract user_id using lestrrat-go/jwx
 	token, err := jwt.ParseString(tokenData.AccessToken, jwt.WithVerify(false))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse JWT: %w", err)
 	}
 
-	// Extract user_id from token claims
 	var userIDClaim interface{}
 	if err := token.Get("user_id", &userIDClaim); err != nil {
 		return nil, fmt.Errorf("user_id not found in JWT token: %w", err)
 	}
 
-	// Convert user_id to string (handle both string and numeric types)
 	var userID string
 	switch v := userIDClaim.(type) {
 	case string:
@@ -392,6 +414,7 @@ func (c *Client) Authenticate(clientID, clientSecret, userEmail, userPassword st
 		AccessToken:  tokenData.AccessToken,
 		RefreshToken: tokenData.RefreshToken,
 		UserID:       userID,
+		ExpiresAt:    expiresAt,
 	}, nil
 }
 
